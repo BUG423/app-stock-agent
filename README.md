@@ -5,7 +5,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-red.svg)](LICENSE)
 
-> 基于大语言模型与多智能体协同的股票行情监控、多模态内容分析与策略推理系统。
+> **app-stock-agent** 是基于大语言模型与多智能体协同的股票行情监控、多模态内容分析与策略推理系统。
 
 ---
 
