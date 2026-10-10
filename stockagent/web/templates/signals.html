@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}信号 · StockAgent{% endblock %}
+
+{% block content %}
+<div class="sa-topbar">
+    <div>
+        <div class="sa-date">交易信号</div>
+        <div class="sa-sub">条件触发后需确认</div>
+    </div>
+</div>
+
+<div class="sa-section">
+    <div class="sa-list" id="signals-list">
+        <div class="sa-empty"><i class="ti ti-bell"></i>加载中…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const actTag = {buy:'<span class="tag tag-up">买入</span>', sell:'<span class="tag tag-down">卖出</span>', hold:'<span class="tag tag-neutral">观望</span>'};
+const stText = {confirmed:'已确认', rejected:'已拒绝', expired:'已过期', pending_user_confirm:'待确认'};
+
+async function loadSignals() {
+    try {
+        const data = await api('/api/v1/signals?page_size=50');
+        const div = document.getElementById('signals-list');
+        if (!data.total) {
+            div.innerHTML = '<div class="sa-empty"><i class="ti ti-bell-off"></i>暂无信号<br><small style="opacity:.7">盘中条件触发后会自动产生</small></div>';
+            return;
+        }
+        div.innerHTML = data.items.map(s => {
+            const pending = s.status === 'pending_user_confirm';
+            const actions = pending ? `<div class="btn-group">
+                <button class="btn btn-primary btn-sm" onclick="confirmSignal('${s.id}', true)">确认</button>
+                <button class="btn btn-ghost btn-sm" onclick="confirmSignal('${s.id}', false)">跳过</button>
+            </div>` : `<span class="meta">${stText[s.status]||s.status}</span>`;
+            return `<div class="sa-row">
+                <div><span class="name">${s.stock_name || s.stock_code}</span> <span class="code">${s.stock_code}</span></div>
+                <div>${actTag[s.action]||s.action}</div>
+                <div class="meta">@ ${s.current_price || '-'}</div>
+                <div class="right">${actions}</div>
+            </div>`;
+        }).join('');
+    } catch(e) { console.error(e); }
+}
+
+async function confirmSignal(id, ok) {
+    if (ok) {
+        try { await api('/api/v1/actions/confirm', { method:'POST', body: JSON.stringify({signal_id:id, confirmed:true}) }); showToast('已确认', 'success'); loadSignals(); }
+        catch(e) { showToast(e.message, 'danger'); }
+    } else {
+        const fb = prompt('跳过理由（可选）:');
+        if (fb === null) return;
+        try { await api('/api/v1/actions/confirm', { method:'POST', body: JSON.stringify({signal_id:id, confirmed:false, feedback_text:fb}) }); loadSignals(); }
+        catch(e) { showToast(e.message, 'danger'); }
+    }
+}
+
+loadSignals();
+</script>
+{% endblock %}

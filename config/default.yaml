@@ -1,0 +1,223 @@
+analysis:
+  ai_review:
+    enabled: true
+  # 博主为规避平台限制使用的缩写；只有原文包含左侧写法时才作为高置信度映射使用。
+  stock_aliases:
+    亚联jx:
+      name: 亚联机械
+      code: '001395'
+    依依gf:
+      name: 依依股份
+      code: '001206'
+    zg软件:
+      name: 中国软件
+      code: '600536'
+app:
+  debug: false
+  name: StockAgent
+  secret_key: ${APP_SECRET_KEY}
+  timezone: Asia/Shanghai
+database:
+  echo_sql: false
+  host: ${DB_HOST:-localhost}
+  max_overflow: 20
+  name: ${DB_NAME:-stockagent}
+  password: ${DB_PASS}
+  pool_size: 10
+  port: ${DB_PORT:-5432}
+  url: postgresql+asyncpg://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+  user: ${DB_USER:-stockagent}
+engine:
+  condition_check_interval_minutes: 5
+  exit:
+    ai_review_enabled: true
+    ma5_break_stop: true
+    max_hold_days: 2
+    next_day_exit: true
+    stop_loss_pct: 0.08
+    take_profit_pct: 0.05
+    # 妖板次日兑现(A股T+1: 买入日不可卖)：次日尽早了结, 涨停除外。
+    # 回测(T+1合法口径)妖板无正期望, 次日开盘卖(-0.7%)伤害最小, 拖到T+3崩(-8.5%)。
+    yaoban_t1_exit: true
+  monitoring:
+    trading_hours:
+      afternoon:
+        end: '15:00'
+        start: '13:00'
+      morning:
+        end: '11:30'
+        start: 09:30
+llm:
+  # 优先使用已配置的 DeepSeek V4 Flash；可用 LLM_DEFAULT_PROVIDER 临时切回其他供应商。
+  default_provider: ${LLM_DEFAULT_PROVIDER:-deepseek}
+  max_tokens: 4096
+  providers:
+    deepseek:
+      api_key: ${DEEPSEEK_API_KEY}
+      base_url: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      # deepseek-chat 将于 2026-07-24 下线，使用当前非思考的 Flash 模型名。
+      model: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      priority: 1
+    glm:
+      api_key: ${GLM_API_KEY}
+      base_url: https://open.bigmodel.cn/api/paas/v4
+      model: glm-4-flash
+      priority: 2
+    kimi:
+      api_key: ${KIMI_API_KEY}
+      base_url: https://api.moonshot.cn/v1
+      model: moonshot-v1
+      priority: 6
+    mimo:
+      api_key: ${MIMO_API_KEY}
+      base_url: https://token-plan-cn.xiaomimimo.com/v1
+      model: mimo-v2.5-pro
+      priority: 3
+    mimo_lite:
+      api_key: ${MIMO_API_KEY}
+      base_url: https://token-plan-cn.xiaomimimo.com/v1
+      model: mimo-v2.5
+      priority: 4
+    tongyi_qwen:
+      api_key: ${QWEN_API_KEY}
+      base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      model: qwen-max
+      priority: 5
+  temperature: 0.1
+  timeout_seconds: 60
+market_data:
+  cache_ttl:
+    daily_kline_minutes: 60
+    realtime_seconds: 30
+  provider: akshare
+notification:
+  email:
+    from_address: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    smtp_port: ${SMTP_PORT:-465}
+    smtp_server: ${SMTP_SERVER}
+    smtp_use_ssl: true
+    to_addresses:
+    - ${USER_EMAIL}
+    - alerts@example.com
+    - team@example.com
+    username: ${SMTP_USERNAME}
+    # 时效优先：新动态、买入信号和分时破位即时发送；10:30/盘后汇总继续保留。
+    # 即时通知按内容或“日期+股票”幂等去重，避免重复投递。
+    policy:
+      new_content: true
+      buy_signals: true
+      intraday_break_alerts: true
+redis:
+  default_ttl_seconds: 300
+  enabled: false
+  host: ${REDIS_HOST:-localhost}
+  port: ${REDIS_PORT:-6379}
+  url: redis://${REDIS_HOST}:${REDIS_PORT}/0
+scheduler:
+  jobs:
+    evening_analysis:
+      cron: '*/5 20-23 * * *'
+      enabled: true
+    exit_monitor:
+      cron: '*/10 9-14 * * mon-fri'
+      enabled: true
+    frequent_fetch:
+      # 20 点后由 evening_analysis 接管，不能与其并发运行同一流水线。
+      cron: '*/5 8-19 * * *'
+      enabled: true
+    market_monitor:
+      cron: '*/5 9-14 * * mon-fri'
+      enabled: true
+    intraday_watch:
+      cron: '*/5 9-14 * * mon-fri'
+      enabled: true
+    intraday_report:
+      cron: '30 10 * * mon-fri'
+      enabled: true
+    post_market_review:
+      cron: '5 15 * * mon-fri'
+      enabled: true
+    notification_sender:
+      cron: '*/2 * * * *'
+      enabled: true
+    health_check:
+      cron: '*/30 * * * *'
+      enabled: true
+  timezone: Asia/Shanghai
+scrapers:
+  # 只处理近 N 天的动态：更老的既不入库也不发邮件(盯盘只关心最新信号；
+  # 清零重抓/翻页时避免陈年旧内容刷屏)。历史回补走 scripts/fetch_*.py，不受此限。
+  max_content_age_days: 2
+  # 绝对时间下限：早于此时刻的动态一律不收(与 max_content_age_days 取更晚者)。
+  # 2026-07-21 清库重建，只从本次重置后的博主信息开始积累。留空则仅按天数窗口。
+  min_content_time: '2026-07-21 14:16:35'
+  bilibili:
+    anti_ban:
+      backoff_on_412: 60
+      max_delay_between_bloggers: 8.0
+      max_requests_per_minute: 15
+      min_delay_between_bloggers: 2.0
+    # B站接口和媒体下载不走宿主机代理，避免失效代理导致动态/图片断连。
+    bypass_proxy: true
+    cookies: ${BILIBILI_COOKIES:-}
+    fetch_article_full_text: false
+    fetch_videos: true
+    # 配置内博主会在数据库初始化时幂等写入；手工禁用后不会被重新启用。
+    tracked_bloggers:
+    - name: 跳跳舞复盘
+      platform_user_id: '21119247'
+      profile_url: https://space.bilibili.com/21119247/dynamic
+      notes: 真人股票博主
+    - name: 小火怪神
+      platform_user_id: '1856426471'
+      profile_url: https://space.bilibili.com/1856426471/dynamic
+      notes: 真人股票博主
+    transcribe_videos: true
+    local_asr:
+      enabled: true
+      # 模型不提交到 Git；运行 scripts/install_local_asr.py 下载到此目录。
+      model_dir: ${LOCAL_ASR_MODEL_DIR:-data/models/sensevoice}
+      num_threads: 1
+      failure_retry_seconds: 3600
+      lock_timeout_seconds: 900
+      max_audio_megabytes: 120
+      max_text_chars: 16000
+      bypass_proxy: true
+      vad_threshold: 0.25
+      min_silence_seconds: 0.8
+      min_speech_seconds: 0.25
+      max_speech_seconds: 25.0
+    video_ocr:
+      enabled: true
+      # 这些 UID 额外做本地画面 OCR，与本地语音转写形成双证据。
+      user_ids: []
+      frame_interval_seconds: 3.0
+      max_frames: 8
+      min_confidence: 0.55
+      failure_retry_seconds: 3600
+  request_delay_seconds: 2.0
+  request_jitter_max: 3.0
+  retry:
+    base_delay_seconds: 5
+    max_delay_seconds: 60
+    max_retries: 3
+  user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
+    like Gecko) Chrome/125.0.0.0 Safari/537.36
+  user_agents:
+  - Mozilla/5.0 Chrome/137
+  - Mozilla/5.0 Chrome/138
+  weibo:
+    cookies: ${WEIBO_COOKIES:-}
+telemetry:
+  logging:
+    file: ''
+    format: text
+    level: INFO
+web:
+  basic_auth:
+    enabled: true
+    password: ${WEB_PASSWORD:-admin}
+    username: ${WEB_USERNAME:-admin}
+  host: 0.0.0.0
+  port: 3003

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}博主 · StockAgent{% endblock %}
+
+{% block content %}
+<div class="sa-topbar">
+    <div>
+        <div class="sa-date">博主</div>
+        <div class="sa-sub">数据源管理</div>
+    </div>
+    <div class="sa-actions">
+        <button class="btn btn-ghost btn-sm" onclick="loadBloggers()"><i class="ti ti-refresh"></i></button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-name').focus()">添加</button>
+    </div>
+</div>
+
+<!-- 添加表单（折叠） -->
+<div class="sa-section" id="add-form-wrap" style="display:none">
+    <div class="sa-list">
+        <div class="sa-row">
+            <input type="text" class="form-control" id="add-name" placeholder="博主名称，如 跳跳虎复盘" style="flex:1">
+            <input type="text" class="form-control" id="add-uid" placeholder="平台 UID" style="flex:.6">
+        </div>
+        <div class="sa-row">
+            <select class="form-select" id="add-platform" style="flex:.5">
+                <option value="bilibili">B站</option>
+                <option value="weibo">微博</option>
+                <option value="wechat">微信</option>
+            </select>
+            <input type="url" class="form-control" id="add-url" placeholder="主页 URL" style="flex:1.2">
+            <button class="btn btn-primary btn-sm" onclick="addBlogger()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 博主列表 -->
+<div class="sa-section">
+    <div class="sa-list" id="blogger-list"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const platLabel = {bilibili:'B站', weibo:'微博', wechat:'微信'};
+
+async function loadBloggers() {
+    try {
+        const data = await api('/api/v1/bloggers?page_size=50');
+        const div = document.getElementById('blogger-list');
+        if (!data.total) {
+            div.innerHTML = '<div class="sa-empty"><i class="ti ti-user-plus"></i>还没有博主，点右上角「添加」</div>';
+            return;
+        }
+        div.innerHTML = data.items.map(b => `<div class="sa-row">
+            <div>
+                <span class="name">${b.name}</span>
+                <span class="code">${platLabel[b.platform]||b.platform} · ${b.platform_user_id}</span>
+            </div>
+            <div class="meta">${b.last_scraped_at ? '上次抓取 ' + fmtTime(b.last_scraped_at) : '未抓取'}</div>
+            <div class="right">
+                <div class="btn-group">
+                    <button class="btn btn-ghost btn-sm" onclick="scrapeBlogger('${b.id}')">抓取</button>
+                    <button class="btn btn-ghost btn-sm" onclick="toggleBlogger('${b.id}', ${!b.enabled})">${b.enabled?'禁用':'启用'}</button>
+                </div>
+            </div>
+        </div>`).join('');
+    } catch(e) { console.error(e); }
+}
+
+async function addBlogger() {
+    const name = document.getElementById('add-name').value.trim();
+    const uid = document.getElementById('add-uid').value.trim();
+    if (!name || !uid) { showToast('请填写名称和 UID', 'danger'); return; }
+    try {
+        await api('/api/v1/bloggers', { method:'POST', body: JSON.stringify({
+            name, platform: document.getElementById('add-platform').value,
+            platform_user_id: uid, profile_url: document.getElementById('add-url').value || ('https://space.bilibili.com/' + uid)
+        })});
+        document.getElementById('add-form-wrap').style.display = 'none';
+        ['add-name','add-uid','add-url'].forEach(i => document.getElementById(i).value = '');
+        showToast('已添加 ' + name, 'success');
+        loadBloggers();
+    } catch(e) { showToast(e.message, 'danger'); }
+}
+
+async function scrapeBlogger(id) {
+    try { const r = await api('/api/v1/bloggers/' + id + '/scrape', { method:'POST' }); showToast(`抓取 ${r.items_scraped} 条`, 'success'); loadBloggers(); }
+    catch(e) { showToast(e.message, 'danger'); }
+}
+async function toggleBlogger(id, enabled) {
+    try { await api('/api/v1/bloggers/' + id, { method:'PUT', body: JSON.stringify({enabled}) }); loadBloggers(); }
+    catch(e) { showToast(e.message, 'danger'); }
+}
+
+// 点"添加"按钮展开表单
+document.querySelector('.sa-actions .btn-primary').onclick = () => {
+    const w = document.getElementById('add-form-wrap');
+    w.style.display = w.style.display === 'none' ? 'block' : 'none';
+};
+loadBloggers();
+</script>
+{% endblock %}

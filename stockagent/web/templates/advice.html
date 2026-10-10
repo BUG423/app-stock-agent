@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}投资建议 · StockAgent{% endblock %}
+
+{% block content %}
+<div class="sa-topbar">
+    <div>
+        <div class="sa-date">投资建议</div>
+        <div class="sa-sub" id="advice-sub">AI 从博主内容中提取</div>
+    </div>
+    <div class="sa-actions">
+        <button class="btn btn-ghost btn-sm" onclick="loadAll()"><i class="ti ti-refresh"></i></button>
+    </div>
+</div>
+
+<!-- 今日建议（按博主分组，单列流） -->
+<div class="sa-section">
+    <div class="sa-list" id="advice-list">
+        <div class="sa-empty"><i class="ti ti-article"></i>加载中…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadAll() {
+    try {
+        const [today, history] = await Promise.all([
+            api('/api/v1/analysis/today/summary'),
+            api('/api/v1/analysis?page_size=20'),
+        ]);
+        document.getElementById('advice-sub').textContent = `今日 ${today.total_analyses} 条 · ${today.market_sentiment === 'bullish' ? '偏多' : today.market_sentiment === 'bearish' ? '偏空' : '中性'}`;
+
+        const div = document.getElementById('advice-list');
+        if (!today.total_analyses) {
+            div.innerHTML = '<div class="sa-empty"><i class="ti ti-mood-empty"></i>今日暂无分析<br><small style="opacity:.7">到控制台点「抓取分析」</small></div>';
+            return;
+        }
+
+        let html = '';
+        for (const [blogger, items] of Object.entries(today.bloggers)) {
+            for (const it of items.slice(0, 3)) {  // 只显示最新3条，克制
+                const stocks = it.stocks.map(s => `<span class="tag tag-blue">${s.name||s.code}</span> `).join('').slice(0,-1);
+                // 触发条件（取任一标的的条件，同篇盘前逻辑一致）
+                const conds = (it.stocks[0] && it.stocks[0].conditions) || [];
+                const condHtml = renderConditionsFull(conds);
+                html += `<div class="sa-row" style="flex-direction:column;align-items:flex-start;gap:.7rem">
+                    <div style="display:flex;width:100%;align-items:baseline;gap:.6rem">
+                        <span class="meta">${blogger} · ${fmtTime(it.published_at || it.created_at)}</span>
+                        <div class="right">${dirTag(it.direction)}</div>
+                    </div>
+                    <div style="font-size:.95rem;line-height:1.6">${it.summary}</div>
+                    ${stocks ? `<div>${stocks}</div>` : ''}
+                    ${condHtml ? `<div style="width:100;padding-top:.2rem;border-top:1px dashed var(--sa-line)"><div class="meta" style="margin-bottom:.4rem">触发条件</div>${condHtml}</div>` : ''}
+                </div>`;
+            }
+        }
+        div.innerHTML = html;
+    } catch(e) { console.error(e); }
+}
+
+loadAll();
+</script>
+{% endblock %}

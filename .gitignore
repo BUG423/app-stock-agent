@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtualenv
+venv/
+.venv/
+env/
+.python-packages/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env.local
+.env.production
+
+# Data
+data/
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Docker
+.docker/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+transcripts/
+.env
+
+# 本地归档(调试脚本/备份打包，不纳入版本控制)
+_archive/
+
+# 手动备份文件
+*.bak
+*.bak-*
+*.bak2-*
+
+# 前端依赖与构建产物(双保险，frontend/.gitignore 已含)
+frontend/node_modules/
+frontend/dist/
