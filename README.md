@@ -3,13 +3,25 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
-[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-red.svg)](LICENSE)
+[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-red.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
 > **app-stock-agent** 是基于大语言模型与多智能体协同的股票行情监控、多模态内容分析与策略推理系统。
 
 ---
 
 ## 🌟 系统核心链路
+
+```mermaid
+flowchart LR
+    A["1. 多模态内容提取<br/>SenseVoice + RapidOCR"] --> B["2. AI 结构化推理<br/>LLM 逻辑判定与校验"]
+    B --> C["3. 盘中实时盯盘<br/>VWAP 均价线 / 突破预警"]
+    C --> D["4. 盘后量化复盘<br/>自动化评估与邮件报告"]
+
+    style A fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+    style B fill:#f0fdf4,stroke:#22c55e,color:#14532d
+    style C fill:#fff7ed,stroke:#f97316,color:#7c2d12
+    style D fill:#fef2f2,stroke:#ef4444,color:#7f1d1d
+```
 
 1. **多模态内容提取** —— 定时追踪公开投资分析动态，结合本地 SenseVoice 语音转写与 RapidOCR 画面关键指标提取，完成行情多证据交叉核验。
 2. **AI 结构化推理** —— 基于大语言模型进行条件提取、买卖逻辑判定与真实行情二次校验，规避虚假信号。
@@ -67,8 +79,8 @@ docker compose up -d
 
 ## 📄 知识产权与开源协议
 
-本项目遵循 **[Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)](LICENSE)** 严格非商业开源许可：
+本项目遵循 **[Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)](https://creativecommons.org/licenses/by-nc-nd/4.0/)** 严格非商业开源许可：
 
-- ❌ **严禁商用**：任何个人或组织不得将本项目源码、交易策略或编译版本用于任何商业盈利目的。
-- ❌ **风险免责**：本项目仅供技术研究与学习交流，不构成任何投资建议或证券咨询。
-- 🔒 **权利保留**：作者保留对本项目系统设计、算法架构的所有版权与最终解释权。
+- ❌ **严禁商用**：任何个人或组织不得将本项目源码、编译产物或衍生版本用于任何商业盈利目的。
+- ❌ **禁止演绎与分发修改版**：未经授权不得散布基于本项目修改后的二次分发版本。
+- 🔒 **权利保留**：作者保留对本平台代码与架构的所有版权与法律追责权利。
